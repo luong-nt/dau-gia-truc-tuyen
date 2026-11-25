@@ -1,0 +1,23 @@
+[project]
+name = "dgtt-backend"
+version = "0.1.0"
+description = "Backend he thong quan ly dau gia truc tuyen (DGTT)"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["migrations/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["B008", "UP046"]  # B008: FastAPI dung Depends(); UP046: giu Generic[T] cho Pydantic
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = [
+    "db: test can PostgreSQL that (dat bien TEST_DATABASE_URL de chay)",
+]

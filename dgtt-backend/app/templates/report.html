@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <title>Báo cáo tổng hợp kết quả đấu giá</title>
+  <style>
+    @page { size: A4 landscape; margin: 15mm; }
+    body { font-family: "DejaVu Sans", "Noto Sans", sans-serif; font-size: 10pt; }
+    h1 { text-align: center; font-size: 14pt; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #444; padding: 3px 5px; text-align: left; }
+  </style>
+</head>
+<body>
+  <h1>BÁO CÁO TỔNG HỢP KẾT QUẢ ĐẤU GIÁ</h1>
+  <p>Kỳ báo cáo: {{ date_from }} đến {{ date_to }} — Điều kiện lọc: {{ filters }}</p>
+  <table>
+    <thead><tr><th>Mã phiên</th><th>Tài sản</th><th>Giá khởi điểm</th><th>Giá trúng (đã xác nhận)</th><th>Trạng thái kết quả</th></tr></thead>
+    <tbody>
+    {% for row in rows %}
+      <tr><td>{{ row.session_code }}</td><td>{{ row.asset_name }}</td><td>{{ row.starting_price }}</td><td>{{ row.winning_amount or "" }}</td><td>{{ row.result_status }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p>Tổng giá trúng chính thức: <strong>{{ total_confirmed }}</strong> (không cộng kết quả dự thảo).</p>
+  <p>Tạo lúc {{ generated_at }}.</p>
+</body>
+</html>

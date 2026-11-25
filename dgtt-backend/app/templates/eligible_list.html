@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <title>Danh sách người đủ điều kiện {{ session_code }}</title>
+  <style>
+    @page { size: A4; margin: 20mm; }
+    body { font-family: "DejaVu Sans", "Noto Sans", sans-serif; font-size: 11pt; }
+    h1 { text-align: center; font-size: 15pt; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #444; padding: 4px 6px; text-align: left; }
+  </style>
+</head>
+<body>
+  <h1>DANH SÁCH NGƯỜI ĐỦ ĐIỀU KIỆN THAM GIA</h1>
+  <p>Phiên: <strong>{{ session_code }}</strong> — Tài sản: {{ asset_name }}</p>
+  <table>
+    <thead>
+      <tr><th>STT</th><th>Mã tham gia</th><th>Họ tên</th>{% if include_identity %}<th>Số giấy tờ</th>{% endif %}</tr>
+    </thead>
+    <tbody>
+    {% for row in rows %}
+      <tr><td>{{ loop.index }}</td><td>{{ row.bidder_alias }}</td><td>{{ row.full_name }}</td>{% if include_identity %}<td>{{ row.id_number }}</td>{% endif %}</tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p>Tạo lúc {{ generated_at }} bởi {{ generated_by }}.</p>
+</body>
+</html>
