@@ -14,6 +14,16 @@ type AuthState = {
 
 const Ctx = createContext<AuthState | null>(null);
 
+/** Đọc thời điểm hết hạn (exp) trong JWT; không kiểm tra chữ ký (việc đó do máy chủ làm). */
+function tokenExpired(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    return typeof payload.exp === 'number' && payload.exp * 1000 <= Date.now();
+  } catch {
+    return false;
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [ready, setReady] = useState(false);
@@ -40,6 +50,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
     });
     refresh().finally(() => setReady(true));
+    // Hết phiên khi không thao tác (NFR-04): token gia hạn trượt 30 phút, kiểm tra hạn ngay tại trình duyệt
+    // để giao diện không tiếp tục hiển thị như đang đăng nhập trên các trang công khai (BUG-002).
+    const timer = window.setInterval(() => {
+      const t = getToken();
+      if (t && tokenExpired(t)) {
+        setToken(null);
+        setUser(null);
+        setSessionExpired(true);
+      }
+    }, 5000);
+    return () => window.clearInterval(timer);
   }, [refresh]);
 
   const login = async (loginName: string, password: string) => {
