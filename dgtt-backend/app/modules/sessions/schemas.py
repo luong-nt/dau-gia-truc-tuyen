@@ -4,6 +4,8 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.core.money import Money
+
 
 class SessionOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -12,9 +14,9 @@ class SessionOut(BaseModel):
     code: str
     asset_id: int
     auctioneer_id: int
-    starting_price: Decimal
-    bid_increment: Decimal
-    deposit_amount: Decimal
+    starting_price: Money
+    bid_increment: Money
+    deposit_amount: Money
     registration_deadline: datetime
     deposit_deadline: datetime
     start_time: datetime

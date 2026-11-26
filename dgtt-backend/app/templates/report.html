@@ -2,27 +2,39 @@
 <html lang="vi">
 <head>
   <meta charset="utf-8">
-  <title>Báo cáo tổng hợp kết quả đấu giá</title>
+  <title>{{ title }}</title>
   <style>
     @page { size: A4 landscape; margin: 15mm; }
-    body { font-family: "DejaVu Sans", "Noto Sans", sans-serif; font-size: 10pt; }
-    h1 { text-align: center; font-size: 14pt; }
+    body { font-family: "DejaVu Sans", "Noto Sans", sans-serif; font-size: 9pt; }
+    h1 { text-align: center; font-size: 14pt; text-transform: uppercase; }
     table { width: 100%; border-collapse: collapse; }
     th, td { border: 1px solid #444; padding: 3px 5px; text-align: left; }
+    td.money { text-align: right; }
   </style>
 </head>
 <body>
-  <h1>BÁO CÁO TỔNG HỢP KẾT QUẢ ĐẤU GIÁ</h1>
-  <p>Kỳ báo cáo: {{ date_from }} đến {{ date_to }} — Điều kiện lọc: {{ filters }}</p>
+  <h1>{{ title }}</h1>
+  <p>Thời điểm tạo: {{ generated_at }} (UTC) — Điều kiện lọc: {{ filters }}</p>
   <table>
-    <thead><tr><th>Mã phiên</th><th>Tài sản</th><th>Giá khởi điểm</th><th>Giá trúng (đã xác nhận)</th><th>Trạng thái kết quả</th></tr></thead>
+    <thead>
+      <tr>
+        <th>Mã phiên</th><th>Mã tài sản</th><th>Tài sản</th><th>Giá khởi điểm</th><th>Thời điểm kết thúc</th>
+        <th>Trạng thái kết quả</th><th>Phiên bản</th><th>Mã người trúng</th><th>Giá trúng</th>
+      </tr>
+    </thead>
     <tbody>
     {% for row in rows %}
-      <tr><td>{{ row.session_code }}</td><td>{{ row.asset_name }}</td><td>{{ row.starting_price }}</td><td>{{ row.winning_amount or "" }}</td><td>{{ row.result_status }}</td></tr>
+      <tr>
+        <td>{{ row.session_code }}</td><td>{{ row.asset_code }}</td><td>{{ row.asset_name }}</td>
+        <td class="money">{{ row.starting_price }}</td><td>{{ row.end_time }}</td><td>{{ row.result_status }}</td>
+        <td>{{ row.version_no if row.version_no is not none else "" }}</td><td>{{ row.winner_alias or "" }}</td>
+        <td class="money">{{ row.winning_amount }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="9">Không có phiên đã kết thúc trong kỳ báo cáo</td></tr>
     {% endfor %}
     </tbody>
   </table>
-  <p>Tổng giá trúng chính thức: <strong>{{ total_confirmed }}</strong> (không cộng kết quả dự thảo).</p>
-  <p>Tạo lúc {{ generated_at }}.</p>
+  <p>Tổng giá trúng chính thức: <strong>{{ total_confirmed }} đồng</strong> (không cộng kết quả dự thảo).</p>
 </body>
 </html>

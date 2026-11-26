@@ -57,6 +57,32 @@ async def create_user(db: AsyncSession, *, username: str, role: UserRole = UserR
     return user
 
 
+async def create_owner(
+    db: AsyncSession,
+    *,
+    name: str = "Chủ tài sản test",
+    id_number: str | None = None,
+    owner_type: OwnerType = OwnerType.INDIVIDUAL,
+    phone: str | None = "0901234567",
+    email: str | None = "chu.tai.san@taisan.vn",
+    address: str | None = "12 Đường Test, Hà Nội",
+    representative_name: str | None = None,
+) -> AssetOwner:
+    """Tạo người có tài sản. `id_number` tối đa 20 ký tự, duy nhất."""
+    owner = AssetOwner(
+        owner_type=owner_type,
+        name=name,
+        id_number=id_number or f"OW{uuid.uuid4().hex[:12]}",
+        representative_name=representative_name,
+        phone=phone,
+        email=email,
+        address=address,
+    )
+    db.add(owner)
+    await db.commit()
+    return owner
+
+
 async def create_asset(
     db: AsyncSession,
     *,
@@ -64,18 +90,24 @@ async def create_asset(
     asset_code: str | None = None,
     name: str = "Tài sản test hồ sơ",
     status: AssetStatus = AssetStatus.UPCOMING,
+    is_public: bool = True,
+    description: str | None = None,
+    owner_id: int | None = None,
 ) -> Asset:
-    """Tạo người có tài sản + tài sản (chưa có phiên). `asset_code` tối đa 30 ký tự."""
+    """Tạo người có tài sản (nếu không truyền `owner_id`) + tài sản (chưa có phiên). `asset_code` tối đa 30 ký tự."""
     tag = uuid.uuid4().hex[:12]
-    owner = AssetOwner(owner_type=OwnerType.INDIVIDUAL, name="Chủ tài sản test", id_number=f"OW{tag}")
-    db.add(owner)
-    await db.flush()
+    if owner_id is None:
+        owner = AssetOwner(owner_type=OwnerType.INDIVIDUAL, name="Chủ tài sản test", id_number=f"OW{tag}")
+        db.add(owner)
+        await db.flush()
+        owner_id = owner.owner_id
     asset = Asset(
         asset_code=asset_code or f"TSR-{tag}",
-        owner_id=owner.owner_id,
+        owner_id=owner_id,
         name=name,
+        description=description,
         status=status,
-        is_public=True,
+        is_public=is_public,
         created_by=created_by,
     )
     db.add(asset)
@@ -93,6 +125,7 @@ async def create_session(
     asset_id: int | None = None,
     start_time: datetime | None = None,
     end_time: datetime | None = None,
+    starting_price: int | Decimal = 100_000_000,
 ) -> AuctionSession:
     """Tạo phiên ở trạng thái `status` (kèm người có tài sản + tài sản mới nếu không truyền `asset_id`).
 
@@ -108,7 +141,7 @@ async def create_session(
     session = AuctionSession(
         asset_id=asset_id,
         auctioneer_id=auctioneer_id,
-        starting_price=Decimal("100000000"),
+        starting_price=Decimal(starting_price),
         bid_increment=Decimal("5000000"),
         deposit_amount=Decimal("20000000"),
         registration_deadline=deadline,
@@ -332,3 +365,22 @@ async def create_result_scenario(
     return ResultScenario(
         users=users, session=session, asset=asset, registrations=registrations, bids=bids, draft=draft
     )
+
+
+async def move_session_times(db: AsyncSession, session: AuctionSession, start: datetime) -> AuctionSession:
+    """Dời lịch phiên về mốc `start` (giữ đúng ràng buộc hạn < bắt đầu < kết thúc). Dùng cho test lọc theo thời gian."""
+    session.registration_deadline = start - timedelta(days=2)
+    session.deposit_deadline = start - timedelta(days=1)
+    session.start_time = start
+    session.end_time = start + timedelta(hours=1)
+    db.add(session)
+    await db.commit()
+    return session
+
+
+async def set_asset_created_at(db: AsyncSession, asset: Asset, created_at: datetime) -> Asset:
+    """Đặt `assets.created_at` (cột có DEFAULT CURRENT_TIMESTAMP) để test lọc theo khoảng thời gian."""
+    asset.created_at = created_at
+    db.add(asset)
+    await db.commit()
+    return asset

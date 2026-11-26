@@ -3,7 +3,7 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.enums import BidResult
+from app.db.enums import BidResult, ResultStatus
 from app.db.models import AuctionResult, Bid, Registration
 
 
@@ -50,3 +50,44 @@ async def list_version_details(
         .order_by(AuctionResult.version_no)
     )
     return [(result, amount, alias) for result, amount, alias in rows]
+
+
+async def get_version_detail(
+    db: AsyncSession, session_id: int, result_id: int
+) -> tuple[AuctionResult, Decimal | None, str | None] | None:
+    """Một phiên bản kết quả kèm giá trúng và mã người trúng (không có định danh)."""
+    row = (
+        await db.execute(
+            select(AuctionResult, Bid.amount, Registration.bidder_alias)
+            .outerjoin(Bid, Bid.bid_id == AuctionResult.winning_bid_id)
+            .outerjoin(Registration, Registration.registration_id == Bid.registration_id)
+            .where(AuctionResult.session_id == session_id, AuctionResult.result_id == result_id)
+        )
+    ).first()
+    return (row[0], row[1], row[2]) if row else None
+
+
+async def list_accepted_bids(db: AsyncSession, session_id: int) -> list[tuple[Bid, str | None]]:
+    """Các lượt giá ACCEPTED của phiên kèm mã người tham gia, theo thứ tự máy chủ tăng dần."""
+    rows = await db.execute(
+        select(Bid, Registration.bidder_alias)
+        .join(Registration, Registration.registration_id == Bid.registration_id)
+        .where(Registration.session_id == session_id, Bid.result == BidResult.ACCEPTED)
+        .order_by(Bid.sequence_no)
+    )
+    return [(bid, alias) for bid, alias in rows.all()]
+
+
+async def get_confirmed_detail(
+    db: AsyncSession, session_id: int
+) -> tuple[AuctionResult, Decimal | None, str | None, int | None] | None:
+    """Bản CONFIRMED duy nhất của phiên kèm giá trúng, mã và registration_id của người trúng."""
+    row = (
+        await db.execute(
+            select(AuctionResult, Bid.amount, Registration.bidder_alias, Registration.registration_id)
+            .outerjoin(Bid, Bid.bid_id == AuctionResult.winning_bid_id)
+            .outerjoin(Registration, Registration.registration_id == Bid.registration_id)
+            .where(AuctionResult.session_id == session_id, AuctionResult.status == ResultStatus.CONFIRMED)
+        )
+    ).first()
+    return (row[0], row[1], row[2], row[3]) if row else None

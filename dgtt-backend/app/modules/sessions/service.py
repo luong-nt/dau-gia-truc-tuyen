@@ -4,6 +4,8 @@ Mỗi thao tác: khóa dòng phiên -> kiểm tra máy trạng thái + quyền -
 -> cập nhật tài sản liên quan -> ghi nhật ký -> COMMIT -> phát sự kiện realtime.
 """
 
+from datetime import datetime, timedelta
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import log_activity
@@ -35,6 +37,7 @@ async def _apply(
     action: str,
     reason: str | None,
     early_end: bool = False,
+    logged_at: datetime | None = None,
 ) -> AuctionSession:
     old_status = session.status
     ensure_transition(old_status, target, reason=reason, early_end=early_end)
@@ -50,6 +53,7 @@ async def _apply(
         old_value=old_status,
         new_value=target,
         reason=reason,
+        created_at=logged_at,
     )
     if target == SessionStatus.ENDED:
         # Tạo kết quả dự thảo trong cùng transaction (FR-22)
@@ -108,16 +112,46 @@ async def open_session(db: AsyncSession, session_id: int, auctioneer: User) -> A
 async def pause_session(db: AsyncSession, session_id: int, auctioneer: User, reason: str | None) -> AuctionSession:
     session = await _load_for_update(db, session_id)
     ensure_assigned_auctioneer(session, auctioneer)
-    return await _apply(db, session, SessionStatus.PAUSED, auctioneer, action="PAUSE_SESSION", reason=reason)
+    # TASK-012: mốc tạm dừng là thời điểm thực tế SAU khi lấy được khoá phiên (không phải lúc bắt đầu transaction),
+    # để resume không cộng bù cả thời gian chờ khoá khi phiên vẫn còn IN_PROGRESS.
+    return await _apply(
+        db, session, SessionStatus.PAUSED, auctioneer, action="PAUSE_SESSION", reason=reason, logged_at=utcnow()
+    )
 
 
 async def resume_session(db: AsyncSession, session_id: int, auctioneer: User, reason: str | None) -> AuctionSession:
-    # TODO(quy chế): có kéo dài end_time bằng thời gian tạm dừng hay không?
-    # Nếu có: cập nhật session.end_time và ghi activity_logs (field_name="end_time").
+    """PAUSED -> IN_PROGRESS. Quy chế (người dùng chọn A, TASK-012): cộng bù đúng thời gian đã tạm dừng vào end_time.
+
+    Sự kiện status_changed phát sau commit mang end_time mới để đồng hồ các bên cập nhật (FR-19).
+    """
     session = await _load_for_update(db, session_id)
     ensure_assigned_auctioneer(session, auctioneer)
-    if utcnow() >= session.end_time:
+    # UPCOMING -> IN_PROGRESS là thao tác MỞ phiên (kiểm giờ bắt đầu), không được đi qua RESUME.
+    if session.status != SessionStatus.PAUSED:
+        raise BusinessRuleError(
+            f"Chỉ tiếp tục được phiên đang tạm dừng (hiện tại: {session.status})", code="INVALID_STATUS_TRANSITION"
+        )
+    ensure_transition(session.status, SessionStatus.IN_PROGRESS, reason=reason)
+    now = utcnow()
+    paused_at = await repository.get_last_pause_time(db, session_id)
+    pause_duration = max(now - paused_at, timedelta(0)) if paused_at else timedelta(0)
+    old_end = session.end_time
+    new_end = old_end + pause_duration
+    if now >= new_end:
         raise BusinessRuleError("Đã quá giờ kết thúc phiên, không thể tiếp tục")
+    if pause_duration > timedelta(0):
+        session.end_time = new_end
+        log_activity(
+            db,
+            user_id=auctioneer.user_id,
+            action="EXTEND_END_TIME",
+            entity_type="auction_session",
+            entity_id=session.session_id,
+            field_name="end_time",
+            old_value=old_end.isoformat(),
+            new_value=new_end.isoformat(),
+            reason=f"Bù thời gian tạm dừng {round(pause_duration.total_seconds())} giây",
+        )
     return await _apply(db, session, SessionStatus.IN_PROGRESS, auctioneer, action="RESUME_SESSION", reason=reason)
 
 

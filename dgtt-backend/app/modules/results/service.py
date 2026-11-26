@@ -7,17 +7,28 @@ Quy ước đã thống nhất (theo schema auction_results):
   bản CONFIRMED cũ chuyển sang SUPERSEDED.
 """
 
+from datetime import datetime
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import log_activity
 from app.core.clock import utcnow
-from app.core.exceptions import BusinessRuleError, ConflictError, NotFoundError
-from app.db.enums import AssetStatus, ResultStatus, SessionStatus
-from app.db.models import AuctionResult, AuctionSession, User
+from app.core.exceptions import AppError, BusinessRuleError, ConflictError, NotFoundError
+from app.core.money import format_vnd
+from app.db.enums import AssetStatus, ResultStatus, SessionStatus, UserRole
+from app.db.models import AuctionResult, AuctionSession, Registration, User
 from app.modules.bidding import repository as bid_repository
+from app.modules.registrations import repository as registration_repository
+from app.modules.reports import exporters
 from app.modules.results import repository
-from app.modules.results.permissions import ensure_can_manage_results, ensure_can_view_results
-from app.modules.results.schemas import AdjustResultRequest, ConfirmResultRequest, ResultOut
+from app.modules.results.permissions import (
+    ensure_can_download_minutes,
+    ensure_can_manage_results,
+    ensure_can_view_official,
+    ensure_can_view_results,
+    is_approved_participant,
+)
+from app.modules.results.schemas import AdjustResultRequest, ConfirmResultRequest, OfficialResultOut, ResultOut
 from app.modules.sessions import repository as session_repository
 
 
@@ -201,4 +212,110 @@ async def adjust_result(
     return output
 
 
-# TODO(FR-23): render_minutes(...) dùng reports.exporters.render_pdf("minutes.html", ...)
+STATUS_LABELS = {
+    ResultStatus.DRAFT: "DỰ THẢO",
+    ResultStatus.CONFIRMED: "ĐÃ XÁC NHẬN",
+    ResultStatus.SUPERSEDED: "ĐÃ BỊ THAY THẾ",
+}
+
+
+def _fmt_time(value: datetime | None) -> str | None:
+    return value.strftime("%d/%m/%Y %H:%M:%S") + " (UTC)" if value else None
+
+
+async def _participant_registration(db: AsyncSession, session_id: int, user: User) -> Registration | None:
+    if user.role != UserRole.BIDDER:
+        return None
+    return await registration_repository.get_registration_for_bidder(db, session_id, user.user_id)
+
+
+async def render_minutes(db: AsyncSession, session_id: int, result_id: int, user: User) -> tuple[bytes, int]:
+    """Sinh biên bản PDF của một phiên bản kết quả (FR-23). Trả (nội dung PDF, version_no)."""
+    session = await session_repository.get_session(db, session_id)
+    if session is None:
+        raise NotFoundError("Không tìm thấy phiên đấu giá")
+    detail = await repository.get_version_detail(db, session_id, result_id)
+    if detail is None:
+        raise NotFoundError("Không tìm thấy bản kết quả của phiên này")
+    result, winning_amount, winner_alias = detail
+    registration = await _participant_registration(db, session_id, user)
+    ensure_can_download_minutes(session, user, registration, result)
+
+    asset = await session_repository.get_asset(db, session.asset_id)
+    confirmer = await session_repository.get_user(db, result.confirmed_by) if result.confirmed_by else None
+    bids = await repository.list_accepted_bids(db, session_id)
+    context = {
+        "session_code": f"PDG-{session.session_id}",
+        "asset_code": asset.asset_code if asset else "",
+        "asset_name": asset.name if asset else "",
+        "version_no": result.version_no,
+        "status_label": STATUS_LABELS.get(result.status, result.status),
+        "starting_price": format_vnd(session.starting_price),
+        "bid_increment": format_vnd(session.bid_increment),
+        "winner_alias": winner_alias if result.winning_bid_id else None,
+        "winning_amount": format_vnd(winning_amount) if winning_amount is not None else None,
+        "exception_note": result.exception_note,
+        "adjustment_reason": result.adjustment_reason,
+        "confirmed_by_name": confirmer.full_name if confirmer else None,
+        "confirmed_at": _fmt_time(result.confirmed_at),
+        "bids": [
+            {
+                "sequence_no": bid.sequence_no,
+                "bidder_alias": alias,
+                "amount": format_vnd(bid.amount),
+                "server_time": _fmt_time(bid.server_time),
+            }
+            for bid, alias in bids
+        ],
+        "generated_at": _fmt_time(utcnow()),
+    }
+    try:
+        content = exporters.render_pdf("minutes.html", context)
+    except (OSError, ImportError) as exc:
+        raise AppError(
+            "Không thể xuất PDF vì thiếu thư viện hệ thống. Vui lòng chạy bằng Docker.",
+            code="PDF_ENGINE_UNAVAILABLE",
+            status_code=503,
+        ) from exc
+    log_activity(
+        db,
+        user_id=user.user_id,
+        action="EXPORT_MINUTES",
+        entity_type="auction_result",
+        entity_id=result.result_id,
+        new_value=str(result.version_no),
+    )
+    await db.commit()
+    return content, result.version_no
+
+
+async def get_official_result(db: AsyncSession, session_id: int, user: User) -> OfficialResultOut:
+    """FR-23: chỉ trả bản CONFIRMED; người tham gia phải có hồ sơ APPROVED trong phiên. Chỉ đọc."""
+    session = await session_repository.get_session(db, session_id)
+    if session is None:
+        raise NotFoundError("Không tìm thấy phiên đấu giá")
+    registration = await _participant_registration(db, session_id, user)
+    ensure_can_view_official(session, user, registration)
+    detail = await repository.get_confirmed_detail(db, session_id)
+    if detail is None:
+        raise NotFoundError("Phiên chưa có kết quả đã xác nhận", code="NO_CONFIRMED_RESULT")
+    result, amount, alias, winner_registration_id = detail
+    mine = is_approved_participant(user, registration)
+    return OfficialResultOut(
+        result_id=result.result_id,
+        session_id=session.session_id,
+        session_code=f"PDG-{session.session_id}",
+        version_no=result.version_no,
+        confirmed_at=result.confirmed_at,
+        is_failed=result.winning_bid_id is None,
+        winning_bidder_alias=alias if result.winning_bid_id else None,
+        winning_amount=amount if result.winning_bid_id else None,
+        exception_note=result.exception_note,
+        my_alias=registration.bidder_alias if mine and registration else None,
+        is_mine=bool(
+            mine
+            and registration
+            and winner_registration_id is not None
+            and winner_registration_id == registration.registration_id
+        ),
+    )

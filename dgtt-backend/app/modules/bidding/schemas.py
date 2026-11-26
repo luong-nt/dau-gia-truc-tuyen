@@ -3,6 +3,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel, Field
 
+from app.core.money import Money
+
 
 class PlaceBidRequest(BaseModel):
     amount: Decimal = Field(gt=0, max_digits=18, decimal_places=0)
@@ -16,7 +18,7 @@ class PlaceBidRequest(BaseModel):
 class BidOut(BaseModel):
     bid_id: int
     transaction_code: str
-    amount: Decimal
+    amount: Money
     result: str
     rejection_reason: str | None
     sequence_no: int
@@ -29,7 +31,7 @@ class PublicBidOut(BaseModel):
 
     sequence_no: int
     bidder_alias: str | None
-    amount: Decimal
+    amount: Money
     result: str
     rejection_reason: str | None = None
     server_time: datetime
@@ -41,10 +43,10 @@ class SessionStateOut(BaseModel):
     session_id: int
     code: str
     status: str
-    starting_price: Decimal
-    bid_increment: Decimal
-    highest_accepted: Decimal | None
-    minimum_next_bid: Decimal
+    starting_price: Money
+    bid_increment: Money
+    highest_accepted: Money | None
+    minimum_next_bid: Money
     start_time: datetime
     end_time: datetime
     server_time: datetime

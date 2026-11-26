@@ -4,6 +4,7 @@ Gọi `log_activity` TRONG CÙNG transaction với thao tác nghiệp vụ, trư
 Nhờ vậy nếu thao tác bị rollback thì nhật ký cũng không được ghi.
 """
 
+from datetime import datetime
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,8 +27,13 @@ def log_activity(
     old_value: Any = None,
     new_value: Any = None,
     reason: str | None = None,
+    created_at: datetime | None = None,
 ) -> None:
-    """user_id = None nghĩa là hệ thống tự thực hiện (ví dụ scheduler)."""
+    """user_id = None nghĩa là hệ thống tự thực hiện (ví dụ scheduler).
+
+    `created_at` tuỳ chọn: truyền `utcnow()` khi cần mốc thực tế của thao tác (mặc định DB dùng CURRENT_TIMESTAMP,
+    tức thời điểm BẮT ĐẦU transaction, có thể sớm hơn nếu thao tác phải chờ khoá). Không truyền thì giữ hành vi cũ.
+    """
     db.add(
         ActivityLog(
             user_id=user_id,
@@ -38,5 +44,6 @@ def log_activity(
             old_value=_to_text(old_value),
             new_value=_to_text(new_value),
             reason=reason,
+            **({} if created_at is None else {"created_at": created_at}),
         )
     )

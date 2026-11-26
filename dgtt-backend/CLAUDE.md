@@ -1,5 +1,55 @@
 @AGENTS.md
 
+## Chỉ thị của người dùng ngày 2026-11-26 — Claude nhận triển khai
+
+Người dùng đã yêu cầu trực tiếp: **"Giao cho CLAUDE CLI đang chạy các task còn lại."**
+Phân công cho đợt này: **Claude triển khai các task còn lại; Codex theo dõi và kiểm thử độc lập.**
+Phân công này thay thế giới hạn vai trò chỉ điều phối/QA và cấm sửa `app/` ở các mục bên dưới đối với đợt công việc này.
+
+### Việc cần thực hiện ngay trong phiên CLI hiện tại
+
+1. Làm việc trong `dgtt-backend/`. Đọc trạng thái gốc của các file `docs/tasks/TASK-*.md`.
+2. Nhận **TASK-013** trước (đang TODO, đã có test), đổi sang IN_PROGRESS và triển khai thật `app/core/money.py` cùng
+   các schema output trong đúng phạm vi task. Các task sau cần kiểu tiền chung này.
+3. Tiếp tục lần lượt các task đủ phụ thuộc: **TASK-006, TASK-007, TASK-014, TASK-008, TASK-009, TASK-010, TASK-011**.
+   Ưu tiên CHANGES_REQUESTED trước việc mới; mỗi lần chỉ sửa một task và tôn trọng phạm vi file/đặc tả của task đó.
+4. Claude được sửa mã ứng dụng trong phạm vi từng task, test và tài liệu liên quan; được điền phần Ghi chú triển khai
+   dù tiêu đề mẫu cũ ghi Codex (ghi rõ tác giả Claude). Không chờ Codex nhận triển khai các task TODO của đợt này.
+5. Dùng dữ liệu mock/fixtures cho kiểm thử khi cần theo quyền người dùng đã cấp. Kiểm thử nghiệp vụ qua API và DB thật;
+   không thay phản hồi API thành giả để che phần chức năng chưa có. Không hạ tiêu chí TC-REV-002/TC-RES-003 để làm xanh test.
+6. Claude dùng `.venv` và database **dgtt_test**; Codex dùng **dgtt_test_codex**. Không chạy test trên database dev dgtt.
+   Giữ nguyên quy ước schema, transaction, khóa phiên, audit, phân quyền, enum và UTC trong AGENTS.md.
+7. Tự kiểm tra và ghi kết quả rõ ràng rồi bàn giao REVIEW. Codex sẽ chạy kiểm thử độc lập và ghi phản hồi ở phần của mình;
+   với vai trò kiểm thử trong đợt này, Codex được đặt CHANGES_REQUESTED khi có lỗi cần Claude sửa.
+   Đọc phản hồi, sửa lỗi cần thiết và cập nhật DONE khi AC đạt và các phần đã triển khai không bị hồi quy; các test của
+   task TODO khác chưa triển khai phải được liệt kê riêng, không giữ vô hạn task hiện tại vì những lỗi đó.
+8. **TASK-012 đã có quyết định của người dùng lúc 2026-11-26 21:04: phương án A, cộng bù đúng thời gian tạm dừng.**
+   Đọc mục Quyết định của người dùng trong file task; hoàn thiện đặc tả API, phạm vi sửa, AC và test, rồi chuyển TODO
+   và triển khai (thêm TASK-012 vào đợt này, sau các task đã đủ đặc tả). Không tiếp tục chờ chọn A/B/C.
+   PDF thật trên Windows có thể thiếu Pango: ghi rõ khác biệt lỗi môi trường với lỗi endpoint/chức năng.
+9. Không commit/push, không dùng Docker, không cài lại môi trường ngoài `.venv`. Tiếp tục đến khi các task của đợt này
+   DONE hoặc BLOCKED với lý do cụ thể cần người dùng quyết định.
+
+### Thay thế Quy trình E cho đợt triển khai này
+
+Mỗi vòng đọc chỉ thị này và các file task, ưu tiên sửa CHANGES_REQUESTED, tiếp tục task IN_PROGRESS của Claude,
+nhận task TODO đủ phụ thuộc để **viết mã ứng dụng**, hoặc đọc phản hồi REVIEW để hoàn tất task.
+Khi không có việc phù hợp thì chờ vòng tiếp theo. Claude không chỉ đồng bộ bảng công việc khi còn task đủ điều kiện triển khai.
+
+### Kết quả kiểm thử Codex đã bàn giao
+
+- **Cập nhật 2026-11-26 21:37:** lượt độc lập cuối trên dgtt_test_codex có **379 ca: 376 passed, 1 failed, 2 skipped**;
+  không ca từng đạt bị hồi quy. Snapshot Python/HTML/SQL không thay đổi trong lúc chạy; lint/format sạch.
+- **Codex đã xác nhận đạt kiểm thử độc lập cho TASK-006, 007, 008, 009, 010, 011, 012, 013, 014** trong phần Ghi chú
+  triển khai của từng file. TASK-012 đã sửa cả lỗi tính thời gian chờ khóa và resume UPCOMING mở phiên sớm; 9/9 ca đạt.
+- Lỗi duy nhất là **TC-RES-003 PDF thật trả 503 PDF_ENGINE_UNAVAILABLE do máy thiếu Pango**; phần xác nhận kết quả và
+  endpoint/phân quyền/nội dung biên bản đạt. Giữ nguyên ca nghiệm thu PDF thật, không hạ tiêu chí hoặc che lỗi môi trường.
+- **Việc cần làm tiếp ngay:** đọc phản hồi Codex, hoàn tất thủ tục bàn giao, chuyển các task REVIEW đã được xác nhận ở
+  trên sang DONE và đồng bộ docs/TASKS.md. TASK-013 đã DONE. Sau khi đủ 14 task DONE, kết thúc đợt; báo riêng giới hạn
+  môi trường PDF, không chờ các ca PDF thật xanh vô hạn và không tạo task mới ngoài đợt này.
+- Báo cáo: `logs/test-results/latest-system-summary.json`, `full-system-10.xml`. Frontend hiện chưa có package.json nên
+  chưa chạy được build giao diện. Không cần lặp lại bộ test khi chỉ đổi trạng thái/tài liệu và không thay mã ứng dụng.
+
 # CLAUDE.md — Vai trò của Claude: Điều phối + Kiểm thử
 
 Bạn là **Claude**, làm việc song song với **Codex** trên dự án này.

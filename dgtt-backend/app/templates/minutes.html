@@ -6,27 +6,40 @@
   <style>
     @page { size: A4; margin: 20mm; }
     body { font-family: "DejaVu Sans", "Noto Sans", sans-serif; font-size: 11pt; }
-    h1 { text-align: center; font-size: 15pt; }
+    h1 { text-align: center; font-size: 15pt; margin-bottom: 4px; }
+    .status { text-align: center; font-weight: bold; font-size: 13pt; margin-top: 0; }
     table { width: 100%; border-collapse: collapse; margin-top: 8px; }
     th, td { border: 1px solid #444; padding: 4px 6px; text-align: left; }
+    td.money { text-align: right; }
     .note { margin-top: 16px; font-style: italic; }
   </style>
 </head>
 <body>
   <h1>BIÊN BẢN KẾT QUẢ ĐẤU GIÁ</h1>
-  <p>Phiên: <strong>{{ session_code }}</strong> — Tài sản: {{ asset_name }} ({{ asset_code }})</p>
-  <p>Phiên bản kết quả: {{ version_no }} — Trạng thái: {{ status }}</p>
-  <p>Giá khởi điểm: {{ starting_price }} — Bước giá: {{ bid_increment }}</p>
-  <p>Người trúng đấu giá: {{ winner_alias or "Không có (đấu giá không thành)" }}
-     {% if winning_amount %} — Giá trúng: {{ winning_amount }}{% endif %}</p>
-  {% if exception_note %}<p>Ghi chú ngoại lệ: {{ exception_note }}</p>{% endif %}
+  <p class="status">{{ status_label }}</p>
 
-  <h2>Diễn biến trả giá</h2>
+  <p>Phiên: <strong>{{ session_code }}</strong> — Tài sản: {{ asset_name }} ({{ asset_code }})</p>
+  <p>Phiên bản kết quả: {{ version_no }}</p>
+  <p>Giá khởi điểm: {{ starting_price }} đồng — Bước giá: {{ bid_increment }} đồng</p>
+  {% if winner_alias %}
+  <p>Người trúng đấu giá: <strong>{{ winner_alias }}</strong> — Giá trúng: <strong>{{ winning_amount }} đồng</strong></p>
+  {% else %}
+  <p>Người trúng đấu giá: Không có (đấu giá không thành)</p>
+  {% endif %}
+  {% if exception_note %}<p>Ghi nhận xử lý ngoại lệ: {{ exception_note }}</p>{% endif %}
+  {% if adjustment_reason %}<p>Lý do điều chỉnh: {{ adjustment_reason }}</p>{% endif %}
+  {% if confirmed_by_name %}
+  <p>Đấu giá viên xác nhận: {{ confirmed_by_name }} — Thời điểm xác nhận: {{ confirmed_at }}</p>
+  {% endif %}
+
+  <h2>Diễn biến trả giá (các lượt giá đã được chấp nhận)</h2>
   <table>
-    <thead><tr><th>STT</th><th>Mã người tham gia</th><th>Mức giá</th><th>Thời gian (máy chủ)</th></tr></thead>
+    <thead><tr><th>STT</th><th>Mã người tham gia</th><th>Mức giá (đồng)</th><th>Thời gian (máy chủ)</th></tr></thead>
     <tbody>
     {% for bid in bids %}
-      <tr><td>{{ bid.sequence_no }}</td><td>{{ bid.bidder_alias }}</td><td>{{ bid.amount }}</td><td>{{ bid.server_time }}</td></tr>
+      <tr><td>{{ bid.sequence_no }}</td><td>{{ bid.bidder_alias }}</td><td class="money">{{ bid.amount }}</td><td>{{ bid.server_time }}</td></tr>
+    {% else %}
+      <tr><td colspan="4">Không có lượt trả giá hợp lệ</td></tr>
     {% endfor %}
     </tbody>
   </table>

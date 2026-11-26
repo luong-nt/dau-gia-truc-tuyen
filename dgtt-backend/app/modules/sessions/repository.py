@@ -1,8 +1,10 @@
+from datetime import datetime
+
 from sqlalchemy import String, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.enums import SessionStatus, UserRole
-from app.db.models import Asset, AuctionSession, User
+from app.db.models import ActivityLog, Asset, AuctionSession, User
 
 
 async def get_session(db: AsyncSession, session_id: int) -> AuctionSession | None:
@@ -77,3 +79,17 @@ async def list_sessions(
         base.order_by(AuctionSession.start_time, AuctionSession.session_id).offset(offset).limit(limit)
     )
     return [(session, asset) for session, asset in rows], int(total or 0)
+
+
+async def get_last_pause_time(db: AsyncSession, session_id: int) -> datetime | None:
+    """Thời điểm tạm dừng gần nhất = created_at của log PAUSE_SESSION mới nhất (kết nối DB đặt timezone UTC)."""
+    return await db.scalar(
+        select(ActivityLog.created_at)
+        .where(
+            ActivityLog.entity_type == "auction_session",
+            ActivityLog.entity_id == session_id,
+            ActivityLog.action == "PAUSE_SESSION",
+        )
+        .order_by(ActivityLog.log_id.desc())
+        .limit(1)
+    )

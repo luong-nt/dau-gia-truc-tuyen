@@ -1,8 +1,9 @@
 from datetime import datetime
-from decimal import Decimal
 from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+
+from app.core.money import Money
 
 
 class ResultOut(BaseModel):
@@ -18,7 +19,7 @@ class ResultOut(BaseModel):
     confirmed_by: int | None
     confirmed_at: datetime | None
     minutes_url: str | None
-    winning_amount: Decimal | None
+    winning_amount: Money | None
     winning_bidder_alias: str | None
 
 
@@ -32,3 +33,19 @@ class AdjustResultRequest(BaseModel):
     winning_bid_id: int | None
     exception_note: str | None = Field(default=None, max_length=2000)
     adjustment_reason: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)]
+
+
+class OfficialResultOut(BaseModel):
+    """FR-23: kết quả chính thức (bản CONFIRMED) cho các bên theo quyền; không có định danh người trúng."""
+
+    result_id: int
+    session_id: int
+    session_code: str
+    version_no: int
+    confirmed_at: datetime | None
+    is_failed: bool
+    winning_bidder_alias: str | None
+    winning_amount: Money | None
+    exception_note: str | None
+    my_alias: str | None
+    is_mine: bool
