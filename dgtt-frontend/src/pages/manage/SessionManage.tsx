@@ -139,7 +139,7 @@ export default function SessionManage() {
         </div>
         {showResults && (
           <div className="col" style={{ flex: 1 }}>
-            <div className="card" style={{ border: '2px solid #1d4ed8' }}>
+            <div className="card" style={{ border: '2px solid var(--jade)' }}>
               <ErrorBox error={results.error} />
               {(draft ?? confirmed) ? (() => {
                 const r = (draft ?? confirmed)!;

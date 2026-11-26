@@ -38,7 +38,7 @@ export default function Reviews() {
             <div
               key={r.registration_id}
               onClick={() => setSelected(r.registration_id)}
-              style={{ padding: 9, borderRadius: 6, marginBottom: 4, cursor: 'pointer', border: '1px solid', borderColor: selected === r.registration_id ? '#bfdbfe' : 'transparent', background: selected === r.registration_id ? '#eff6ff' : undefined }}
+              style={{ padding: 9, borderRadius: 6, marginBottom: 4, cursor: 'pointer', border: '1px solid', borderColor: selected === r.registration_id ? 'var(--jade-200)' : 'transparent', background: selected === r.registration_id ? 'var(--jade-50)' : undefined }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <b>HS-{r.registration_id}</b>

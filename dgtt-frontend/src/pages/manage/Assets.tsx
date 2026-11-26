@@ -75,7 +75,7 @@ function AssetTab() {
                   <tr
                     key={a.asset_id}
                     onClick={() => { setSelected(a.asset_id); setCreating(false); }}
-                    style={{ cursor: 'pointer', background: selected === a.asset_id ? '#eff6ff' : undefined }}
+                    style={{ cursor: 'pointer', background: selected === a.asset_id ? 'var(--jade-50)' : undefined }}
                   >
                     <td>{a.asset_code}</td>
                     <td>{a.name}</td>
@@ -283,7 +283,7 @@ function AssetPanel({ assetId, onChanged, onDeleted }: { assetId: number; onChan
                 <AssetImage assetId={asset.asset_id} att={im} height={90} />
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 4, padding: '4px 6px', fontSize: 11 }}>
                   <span className="mut" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{im.file_name}</span>
-                  <a href="#" style={{ color: '#b91c1c' }} onClick={(e) => { e.preventDefault(); removeAttachment(im.attachment_id); }}>Xóa</a>
+                  <a href="#" style={{ color: 'var(--seal)' }} onClick={(e) => { e.preventDefault(); removeAttachment(im.attachment_id); }}>Xóa</a>
                 </div>
               </div>
             ))}
@@ -294,7 +294,7 @@ function AssetPanel({ assetId, onChanged, onDeleted }: { assetId: number; onChan
             <a href="#" onClick={(e) => { e.preventDefault(); downloadFile(`/assets/${asset.asset_id}/attachments/${d.attachment_id}`, undefined, d.file_name); }}>
               {d.file_name}
             </a>
-            <span className="mut">{fileSize(d.file_size)} · <a href="#" style={{ color: '#b91c1c' }} onClick={(e) => { e.preventDefault(); removeAttachment(d.attachment_id); }}>Xóa</a></span>
+            <span className="mut">{fileSize(d.file_size)} · <a href="#" style={{ color: 'var(--seal)' }} onClick={(e) => { e.preventDefault(); removeAttachment(d.attachment_id); }}>Xóa</a></span>
           </div>
         ))}
         {asset.attachments.length === 0 && <div className="mut">Chưa có ảnh hoặc tài liệu.</div>}

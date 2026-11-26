@@ -63,11 +63,11 @@ export default function Reports() {
           <div className="row" style={{ flexWrap: 'wrap' }}>
             <div className="card" style={{ flex: 1, minWidth: 220 }}>
               <div className="mut">Tổng giá trúng đã xác nhận</div>
-              <div style={{ fontSize: 26, fontWeight: 700, color: '#15803d' }}>{vnd(s.total_confirmed_amount)}</div>
+              <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--jade)' }}>{vnd(s.total_confirmed_amount)}</div>
             </div>
             <div className="card" style={{ flex: 1, minWidth: 220 }}>
               <div className="mut">Phiên chờ xác nhận kết quả</div>
-              <div style={{ fontSize: 26, fontWeight: 700, color: '#b45309' }}>{s.session_results.awaiting_confirmation}</div>
+              <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--brass)' }}>{s.session_results.awaiting_confirmation}</div>
             </div>
             <div className="card" style={{ flex: 1, minWidth: 220 }}>
               <div className="mut">Phiên có người trúng / không thành</div>
