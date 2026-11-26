@@ -2,11 +2,38 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { ROLE_LABEL } from '../format';
 
+/** Dấu búa đấu giá – dùng chung cho thanh trên và phòng đấu giá. */
+export function GavelMark() {
+  return (
+    <span className="mark" aria-hidden="true">
+      <svg viewBox="0 0 20 20">
+        <g transform="rotate(-45 10 9)">
+          <rect x="5" y="3.2" width="10" height="5" rx="1.3" fill="#fff" />
+          <rect x="9.1" y="8" width="1.8" height="9.5" rx=".9" fill="#fff" />
+        </g>
+        <rect x="2" y="16.6" width="8.5" height="2" rx="1" fill="#3FB3A3" />
+      </svg>
+    </span>
+  );
+}
+
 function Logo({ sub }: { sub: string }) {
   return (
-    <NavLink to="/" className="logo" style={{ textDecoration: 'none' }}>
-      DGTT<small>{sub}</small>
+    <NavLink to="/" className="logo">
+      <GavelMark />
+      <span>DGTT<small>{sub}</small></span>
     </NavLink>
+  );
+}
+
+function Footer() {
+  return (
+    <footer className="foot">
+      <div className="foot-in">
+        <span>DGTT – Hệ thống đấu giá trực tuyến. Đồ án môn Công nghệ phần mềm.</span>
+        <span>Giờ hiển thị theo GMT+7, đồng bộ với giờ máy chủ.</span>
+      </div>
+    </footer>
   );
 }
 
@@ -71,6 +98,7 @@ export function PublicLayout() {
       </div>
       <ExpiredBanner />
       <Outlet />
+      <Footer />
     </>
   );
 }
