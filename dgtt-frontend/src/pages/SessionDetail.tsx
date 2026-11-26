@@ -10,20 +10,20 @@ import { dt, fileSize, parseUtc, REG_STATUS, SESSION_STATUS, vnd } from '../form
 /** Ảnh và tài liệu của tài sản (FR-07). Tài sản chưa công khai thì khách không xem được: chỉ hiện ô trống. */
 function AssetGallery({ asset }: { asset: AssetDetail | null }) {
   const [current, setCurrent] = useState<number | null>(null);
-  if (!asset) return <div className="img" style={{ height: 280 }}>Chưa có ảnh tài sản</div>;
+  if (!asset) return <div className="img" style={{ height: 360 }}>Chưa có ảnh tài sản</div>;
   const images = asset.attachments.filter((a) => a.file_type === 'ASSET_IMAGE');
   const docs = asset.attachments.filter((a) => a.file_type === 'ASSET_DOCUMENT');
   const main = images.find((a) => a.attachment_id === current) ?? firstImage(asset.attachments);
   return (
     <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-      <AssetImage assetId={asset.asset_id} att={main} height={280} alt={asset.name} />
+      <AssetImage assetId={asset.asset_id} att={main} height={360} alt={asset.name} />
       {images.length > 1 && (
         <div style={{ display: 'flex', gap: 6, padding: 8, overflowX: 'auto' }}>
           {images.map((im) => (
             <div
               key={im.attachment_id}
               onClick={() => setCurrent(im.attachment_id)}
-              style={{ width: 72, flex: '0 0 72px', cursor: 'pointer', outline: main?.attachment_id === im.attachment_id ? '2px solid #1d4ed8' : 'none', borderRadius: 4, overflow: 'hidden' }}
+              style={{ width: 72, flex: '0 0 72px', cursor: 'pointer', outline: main?.attachment_id === im.attachment_id ? '2px solid var(--jade)' : 'none', borderRadius: 4, overflow: 'hidden' }}
             >
               <AssetImage assetId={asset.asset_id} att={im} height={52} />
             </div>
@@ -67,17 +67,22 @@ function OfficialResultCard({ sid }: { sid: number }) {
       </div>
     );
   return (
-    <div className="card" style={{ border: data.is_mine ? '2px solid #15803d' : undefined }}>
-      <div className="h2">Kết quả chính thức</div>
-      {data.is_mine && <div className="ok-box" style={{ marginBottom: 10 }}>Bạn ({data.my_alias}) là người trúng đấu giá.</div>}
-      {data.is_failed ? (
-        <div>Đấu giá không thành: không có lượt trả giá hợp lệ.</div>
-      ) : (
-        <table className="kv"><tbody>
-          <tr><td>Người trúng đấu giá</td><td><b>{data.winning_bidder_alias}</b></td></tr>
-          <tr><td>Giá trúng</td><td><b style={{ color: '#15803d' }}>{vnd(data.winning_amount)}</b></td></tr>
-        </tbody></table>
-      )}
+    <div className="card" style={{ border: data.is_mine ? '2px solid var(--jade)' : undefined }}>
+      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="h2">Kết quả chính thức</div>
+          {data.is_mine && <div className="ok-box" style={{ marginBottom: 10 }}>Bạn ({data.my_alias}) là người trúng đấu giá.</div>}
+          {data.is_failed ? (
+            <div>Đấu giá không thành: không có lượt trả giá hợp lệ.</div>
+          ) : (
+            <table className="kv"><tbody>
+              <tr><td>Người trúng đấu giá</td><td><b>{data.winning_bidder_alias}</b></td></tr>
+              <tr><td>Giá trúng</td><td><b style={{ color: 'var(--jade)', fontSize: 18 }}>{vnd(data.winning_amount)}</b></td></tr>
+            </tbody></table>
+          )}
+        </div>
+        <div className="seal" aria-hidden="true">DGTT<b>ĐÃ XÁC NHẬN</b>{data.session_code}</div>
+      </div>
       <div className="mut" style={{ marginTop: 6 }}>Xác nhận lúc {dt(data.confirmed_at)} · phiên bản {data.version_no}</div>
       <button
         className="btn"
@@ -166,12 +171,12 @@ export default function SessionDetail() {
         </div>
         <div className="col" style={{ flex: 1 }}>
           <div className="card">
-            <Badge color={st.color}>{st.label}</Badge>
-            <div className="h1" style={{ marginTop: 8 }}>{s.asset_name}</div>
+            {s.status === 'IN_PROGRESS' ? <span className="b livechip">{st.label}</span> : <Badge color={st.color}>{st.label}</Badge>}
+            <div className="h1" style={{ marginTop: 10 }}>{s.asset_name}</div>
             <div className="mut">Mã tài sản: {s.asset_code} · Mã phiên: {s.code}</div>
             <table className="kv" style={{ marginTop: 12 }}>
               <tbody>
-                <tr><td>Giá khởi điểm</td><td><b>{vnd(s.starting_price)}</b></td></tr>
+                <tr><td>Giá khởi điểm</td><td><b style={{ color: 'var(--jade)', fontSize: 18 }}>{vnd(s.starting_price)}</b></td></tr>
                 <tr><td>Bước giá</td><td><b>{vnd(s.bid_increment)}</b></td></tr>
                 <tr><td>Tiền đặt trước</td><td><b>{vnd(s.deposit_amount)}</b></td></tr>
                 <tr><td>Hạn nhận hồ sơ</td><td><b>{dt(s.registration_deadline)}</b></td></tr>
