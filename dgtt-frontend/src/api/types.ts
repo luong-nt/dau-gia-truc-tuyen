@@ -159,3 +159,85 @@ export interface Result {
   winning_amount: Money | null;
   winning_bidder_alias: string | null;
 }
+
+// ---- Tài sản (FR-05 – FR-07), backend TASK-007, TASK-008, TASK-014
+export type AssetStatus = 'UPCOMING' | 'IN_AUCTION' | 'ENDED' | 'SUSPENDED_CANCELLED';
+
+export interface Asset {
+  asset_id: number;
+  asset_code: string;
+  name: string;
+  description: string | null;
+  status: AssetStatus;
+  is_public: boolean;
+  created_at: string;
+}
+
+export interface AssetOwner {
+  owner_id: number;
+  owner_type: 'INDIVIDUAL' | 'ORGANIZATION';
+  name: string;
+  id_number: string;
+  representative_name: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  created_at: string;
+}
+
+export interface AssetAttachment {
+  attachment_id: number;
+  asset_id: number;
+  file_type: 'ASSET_IMAGE' | 'ASSET_DOCUMENT';
+  file_name: string;
+  file_format: string | null;
+  file_size: number | null;
+  display_order: number | null;
+  uploaded_at: string;
+}
+
+export interface AssetDetail extends Asset {
+  owner: AssetOwner | null;
+  sessions: { session_id: number; code: string; status: SessionStatus; starting_price: Money; start_time: string; end_time: string }[];
+  attachments: AssetAttachment[];
+}
+
+// ---- Kết quả chính thức (FR-23), backend TASK-009
+export interface OfficialResult {
+  result_id: number;
+  session_id: number;
+  session_code: string;
+  version_no: number;
+  confirmed_at: string | null;
+  is_failed: boolean;
+  winning_bidder_alias: string | null;
+  winning_amount: Money | null;
+  exception_note: string | null;
+  my_alias: string | null;
+  is_mine: boolean;
+}
+
+// ---- Thống kê, nhật ký (FR-24 – FR-26), backend TASK-010, TASK-011
+export interface ReportSummary {
+  date_from: string | null;
+  date_to: string | null;
+  generated_at: string;
+  assets_by_status: Record<string, number>;
+  registrations_by_status: Record<string, number>;
+  sessions_by_status: Record<string, number>;
+  session_results: { awaiting_confirmation: number; confirmed_with_winner: number; confirmed_failed: number };
+  total_confirmed_amount: Money;
+}
+
+export interface ActivityLog {
+  log_id: number;
+  user_id: number | null;
+  action: string;
+  entity_type: string;
+  entity_id: number | null;
+  field_name: string | null;
+  old_value: string | null;
+  new_value: string | null;
+  reason: string | null;
+  created_at: string;
+}
