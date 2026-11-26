@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api, ApiError, roomSocketUrl } from '../../api/client';
-import type { BidOut, PublicBid, RoomState, Session, SessionStatus } from '../../api/types';
+import type { AssetDetail, BidOut, PublicBid, RoomState, Session, SessionStatus } from '../../api/types';
+import { AssetImage, firstImage } from '../../components/AssetImage';
+import { GavelMark } from '../../components/Layout';
 import { useAuth } from '../../auth/AuthContext';
 import { Badge, ErrorBox, Loading } from '../../components/ui';
 import { countdown, dt, money, parseUtc, SESSION_STATUS, timeOnly, vnd } from '../../format';
@@ -39,6 +41,9 @@ export default function AuctionRoom() {
   const [pauseReason, setPauseReason] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const amountTouched = useRef(false);
+  const [asset, setAsset] = useState<AssetDetail | null>(null);
+  const [flashKey, setFlashKey] = useState(0);
+  const lastHighest = useRef<string | null | undefined>(undefined);
 
   const applySnapshot = useCallback((s: RoomState) => {
     setState(s);
@@ -58,7 +63,12 @@ export default function AuctionRoom() {
 
   // Tải thông tin phiên và trạng thái phòng
   useEffect(() => {
-    api<Session>(`/sessions/${sid}`).then(setSession).catch(() => undefined);
+    api<Session>(`/sessions/${sid}`)
+      .then((s) => {
+        setSession(s);
+        api<AssetDetail>(`/assets/${s.asset_id}`).then(setAsset).catch(() => undefined);
+      })
+      .catch(() => undefined);
     loadState();
   }, [sid, loadState]);
 
@@ -124,6 +134,13 @@ export default function AuctionRoom() {
     };
   }, [sid, applySnapshot]);
 
+  // Hiệu ứng nhấn khi giá cao nhất thay đổi (chỉ hiển thị, không ảnh hưởng nghiệp vụ)
+  useEffect(() => {
+    const h = state?.highest_accepted == null ? null : String(state.highest_accepted);
+    if (state && lastHighest.current !== undefined && h && h !== lastHighest.current) setFlashKey((k) => k + 1);
+    if (state) lastHighest.current = h ?? null;
+  }, [state]);
+
   // Đồng hồ: tính theo giờ máy chủ (UI-02)
   useEffect(() => {
     const t = window.setInterval(() => {
@@ -187,9 +204,9 @@ export default function AuctionRoom() {
 
   return (
     <>
-      <div className="top">
-        <Link to="/" className="logo" style={{ textDecoration: 'none' }}>DGTT<small>Phòng đấu giá</small></Link>
-        <div className="hide-sm"><b>{state.code}</b>{session?.asset_name && <> · {session.asset_name}</>}</div>
+      <div className="top room-top">
+        <Link to="/" className="logo"><GavelMark /><span>DGTT<small>Phòng đấu giá</small></span></Link>
+        <div className="hide-sm"><b>{state.code}</b>{session?.asset_name && <span style={{ color: '#AEBCB8', marginLeft: 10 }}>{session.asset_name}</span>}</div>
         <div className="sp" />
         <Badge color={conn === 'open' ? 'green' : 'red'}>{conn === 'open' ? '● Đã kết nối' : '● Mất kết nối'}</Badge>
         {state.my_alias && <span className="mut">Mã của bạn: <b>{state.my_alias}</b></span>}
@@ -200,14 +217,14 @@ export default function AuctionRoom() {
         <ErrorBox error={error} />
         <div className="row">
           <div className="col" style={{ flex: 1.5 }}>
-            <div className="card" style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
-              <div style={{ flex: 1 }}>
+            <div className="stage">
+              <div style={{ flex: 1, minWidth: 260 }}>
                 <Badge color={st.color}>{st.label}</Badge>
                 <div className="mut" style={{ marginTop: 8 }}>Giá cao nhất đã được chấp nhận</div>
-                <div className="big-price">{highest ? vnd(highest) : 'Chưa có lượt giá'}</div>
+                <div key={flashKey} className={`big-price${highest ? '' : ' empty'}${flashKey ? ' flash' : ''}`}>{highest ? vnd(highest) : 'Chưa có lượt giá'}</div>
                 {top && <div className="mut">Người giữ giá: {top.bidder_alias} · lượt #{top.sequence_no} lúc {timeOnly(top.server_time)}</div>}
               </div>
-              <div className="clock">
+              <div className={`clock${accepting && remaining < 60000 ? ' urgent' : ''}`}>
                 <div style={{ fontSize: 12, opacity: 0.7 }}>{state.status === 'UPCOMING' ? 'Bắt đầu lúc' : 'Thời gian còn lại'}</div>
                 <b>{state.status === 'UPCOMING' ? timeOnly(state.start_time) : state.status === 'PAUSED' ? 'Tạm dừng' : state.status === 'ENDED' || state.status === 'CANCELLED' ? 'Đã đóng' : countdown(remaining)}</b>
                 <div style={{ fontSize: 11, opacity: 0.7 }}>Kết thúc {timeOnly(state.end_time)} (giờ máy chủ)</div>
@@ -217,16 +234,16 @@ export default function AuctionRoom() {
             {isBidder ? (
               <div className="card">
                 <div className="h2">Đặt giá</div>
-                <div className="row" style={{ gap: 20, marginBottom: 10, flexDirection: 'row', flexWrap: 'wrap' }}>
-                  <div><span className="mut">Giá khởi điểm</span><br /><b>{vnd(state.starting_price)}</b></div>
-                  <div><span className="mut">Bước giá</span><br /><b>{vnd(state.bid_increment)}</b></div>
-                  <div><span className="mut">Giá hợp lệ tối thiểu</span><br /><b style={{ color: '#1d4ed8' }}>{vnd(minBid)}</b></div>
+                <div className="stat3">
+                  <div><span>Giá khởi điểm</span><b>{vnd(state.starting_price)}</b></div>
+                  <div><span>Bước giá</span><b>{vnd(state.bid_increment)}</b></div>
+                  <div><span>Giá hợp lệ tối thiểu</span><b style={{ color: 'var(--jade)' }}>{vnd(minBid)}</b></div>
                 </div>
                 <div className="bid-row">
                   <button className="btn" disabled={amount - step < minBid} onClick={() => { amountTouched.current = true; setAmount(amount - step); }}>−</button>
                   <input
                     className="in"
-                    style={{ flex: 1, minWidth: 150, fontSize: 20, fontWeight: 600, textAlign: 'right' }}
+                    style={{ flex: 1, minWidth: 150, fontSize: 22, fontWeight: 700, textAlign: 'right' }}
                     value={amount.toLocaleString('vi-VN')}
                     onChange={(e) => { amountTouched.current = true; setAmount(Number(e.target.value.replace(/\D/g, '')) || 0); }}
                     inputMode="numeric"
@@ -266,11 +283,11 @@ export default function AuctionRoom() {
           <div className="col" style={{ flex: 1 }}>
             <div className="card" style={{ flex: 1 }}>
               <div className="h2">Diễn biến trả giá</div>
-              <table>
+              <table className="feed">
                 <thead><tr><th>Lượt</th><th>Người trả</th><th>Mức giá</th><th>Giờ máy chủ</th></tr></thead>
                 <tbody>
                   {state.recent_bids.filter((b) => b.result === 'ACCEPTED').map((b, i) => (
-                    <tr key={b.sequence_no} style={i === 0 ? { background: '#f0fdf4', fontWeight: 600 } : undefined}>
+                    <tr key={b.sequence_no} className={i === 0 ? 'lead' : undefined}>
                       <td>#{b.sequence_no}</td>
                       <td>{b.bidder_alias}{b.bidder_alias && b.bidder_alias === state.my_alias && ' (bạn)'}</td>
                       <td>{vnd(b.amount)}</td>
@@ -284,6 +301,12 @@ export default function AuctionRoom() {
             </div>
             <div className="card">
               <div className="h2">Thông tin phiên</div>
+              {session && (
+                <div className="room-asset" style={{ marginBottom: 12 }}>
+                  <div><AssetImage assetId={session.asset_id} att={firstImage(asset?.attachments)} height={64} /></div>
+                  <div><b>{session.asset_name}</b><div className="mut">{session.asset_code}</div></div>
+                </div>
+              )}
               <div style={{ lineHeight: 1.8, fontSize: 13 }}>
                 Bắt đầu: {dt(state.start_time)}<br />
                 Kết thúc: {dt(state.end_time)}<br />

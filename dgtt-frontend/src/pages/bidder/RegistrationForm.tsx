@@ -21,7 +21,7 @@ function checkFile(f: File): string | null {
 function Step({ n, label, on }: { n: number; label: string; on: boolean }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <span style={{ width: 26, height: 26, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, background: on ? '#1d4ed8' : '#e5e7eb', color: on ? '#fff' : '#6b7280' }}>{n}</span>
+      <span style={{ width: 26, height: 26, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, background: on ? 'var(--jade)' : '#e5e7eb', color: on ? '#fff' : '#6b7280' }}>{n}</span>
       <span style={{ fontWeight: on ? 600 : 400 }}>{label}</span>
     </div>
   );
@@ -144,14 +144,14 @@ export default function RegistrationForm() {
           {step === 2 && (
             <div className="form">
               <div className="h2">Bước 2. Giấy tờ theo quy chế</div>
-              <div style={{ border: `1px dashed ${missingIds ? '#b91c1c' : '#c5cbd3'}`, borderRadius: 6, padding: 12 }}>
-                <div style={{ fontWeight: 600 }}>Giấy tờ định danh (CCCD 2 mặt…) {!resubmit && <span style={{ color: '#b91c1c' }}>*</span>}</div>
+              <div style={{ border: `1px dashed ${missingIds ? 'var(--seal)' : 'var(--line)'}`, borderRadius: 6, padding: 12 }}>
+                <div style={{ fontWeight: 600 }}>Giấy tờ định danh (CCCD 2 mặt…) {!resubmit && <span style={{ color: 'var(--seal)' }}>*</span>}</div>
                 <div className="mut">PDF, JPG, PNG; tối đa {MAX_MB} MB/tệp; chọn được nhiều tệp</div>
                 <input type="file" multiple accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setIds(Array.from(e.target.files ?? []))} style={{ marginTop: 8 }} />
                 {ids.map((f) => <div key={f.name} className="mut">✓ {f.name}</div>)}
                 {missingIds && <div className="errt">Bắt buộc ít nhất một tệp.</div>}
               </div>
-              <div style={{ border: '1px dashed #c5cbd3', borderRadius: 6, padding: 12 }}>
+              <div style={{ border: '1px dashed var(--line)', borderRadius: 6, padding: 12 }}>
                 <div style={{ fontWeight: 600 }}>Chứng từ nộp tiền đặt trước</div>
                 <div className="mut">PDF, JPG, PNG; tối đa {MAX_MB} MB</div>
                 <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => setReceipt(e.target.files?.[0] ?? null)} style={{ marginTop: 8 }} />

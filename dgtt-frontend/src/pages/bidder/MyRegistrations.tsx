@@ -40,7 +40,7 @@ export default function MyRegistrations() {
               </thead>
               <tbody>
                 {data.items.map((r) => (
-                  <tr key={r.registration_id} style={{ background: r.status === 'NEEDS_SUPPLEMENT' ? '#fffbeb' : undefined, cursor: 'pointer' }} onClick={() => setSelected(r.registration_id)}>
+                  <tr key={r.registration_id} style={{ background: r.status === 'NEEDS_SUPPLEMENT' ? 'var(--brass-50)' : undefined, cursor: 'pointer' }} onClick={() => setSelected(r.registration_id)}>
                     <td>HS-{r.registration_id}</td>
                     <td><Link to={`/sessions/${r.session_id}`}>{r.session_code}</Link>{r.bidder_alias && <> · <b>{r.bidder_alias}</b></>}</td>
                     <td>{dt(r.submitted_at)}</td>
@@ -77,7 +77,7 @@ export default function MyRegistrations() {
               </div>
               <div className="card" style={{ flex: 1 }}>
                 <div className="h2">Lịch sử hồ sơ</div>
-                <div style={{ fontSize: 13, lineHeight: 2, borderLeft: '2px solid #d9dde3', paddingLeft: 12 }}>
+                <div style={{ fontSize: 13, lineHeight: 2, borderLeft: '2px solid var(--line)', paddingLeft: 12 }}>
                   <div>{dt(current.submitted_at)} — Nộp hồ sơ</div>
                   {current.reviews.map((rv, i) => (
                     <div key={i}>
