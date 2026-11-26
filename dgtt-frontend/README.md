@@ -43,9 +43,14 @@ về backend giống cấu hình proxy trong `vite.config.ts`.
 | — | Danh sách đủ điều kiện, xuất CSV/PDF | Nhân viên, Đấu giá viên | `/eligible-bidders`, `/export` | FR-14 |
 | — | Quản lý tài khoản | Quản trị viên | `/users` | FR-04 |
 
-**Chưa làm vì backend chưa có API:** quản lý tài sản và ảnh tài sản (TASK-007, TASK-008), thống kê, nhật ký, báo cáo
-(TASK-010, TASK-011), xuất biên bản PDF (TASK-006). Trang `Tài sản` hiện chỉ hiển thị thông báo chờ API;
-khi tạo phiên tạm nhập mã số tài sản.
+| SCR-07 | Quản lý tài sản, người có tài sản, ảnh và tài liệu | Nhân viên | `/assets`, `/asset-owners`, `/assets/{id}/attachments`, `/assets/{id}/status` | FR-05 – 07 |
+| — | Ảnh, tài liệu tài sản trên trang chủ và chi tiết phiên | Mọi vai trò | `GET /assets/{id}`, tải tệp đính kèm | FR-07 |
+| — | Kết quả chính thức, tải biên bản PDF | Người tham gia được duyệt, nội bộ | `/results/official`, `/results/{id}/minutes` | FR-23 |
+| — | Thống kê, xuất báo cáo CSV/PDF; nhật ký hoạt động (chỉ Quản trị viên) | Nhân viên, Quản trị viên | `/reports/summary`, `/reports/results/export`, `/activity-logs` | FR-24 – 26 |
+
+Cập nhật theo backend 2.0 (commit 2555aef): đã nối đủ API tài sản (TASK-007, 008, 014), biên bản PDF (TASK-006),
+kết quả chính thức (TASK-009), thống kê và nhật ký (TASK-010, 011). Khi tạo phiên, tài sản được chọn từ danh sách
+tài sản Sắp đấu giá.
 
 ## 3. Quy ước đã áp dụng
 
