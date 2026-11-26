@@ -146,9 +146,12 @@ function ReviewPanel({ reg, onChanged }: { reg: Registration; onChanged: () => P
           reasonLabel={check.result === 'FAILED' ? 'Lý do không đạt' : 'Ghi chú'}
           confirmText="Lưu kết quả kiểm tra"
           extra={check.type === 'DEPOSIT_CHECK' ? (
-            <label>Căn cứ đối soát (số chứng từ, ngày ghi có)<input className="in" value={evidence} onChange={(e) => setEvidence(e.target.value)} /></label>
+            <label>Căn cứ đối soát (số chứng từ, ngày ghi có){check.result === 'PASSED' ? ' *' : ''}<input className="in" value={evidence} onChange={(e) => setEvidence(e.target.value)} /></label>
           ) : undefined}
           onConfirm={async (reason) => {
+            // FR-11 / SCR-08: xác nhận tiền đặt trước phải có căn cứ đối soát (BUG-001)
+            if (check.type === 'DEPOSIT_CHECK' && check.result === 'PASSED' && !evidence.trim())
+              throw new Error('Vui lòng nhập căn cứ đối soát (số chứng từ, ngày ghi có) trước khi xác nhận tiền đặt trước');
             await api(`/registrations/${reg.registration_id}/checks`, { method: 'POST', body: { review_type: check.type, result: check.result, reason: reason || null, evidence: evidence || null } });
             setEvidence('');
             await onChanged();
