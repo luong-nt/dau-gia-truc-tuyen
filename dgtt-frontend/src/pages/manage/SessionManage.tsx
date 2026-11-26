@@ -42,6 +42,7 @@ export default function SessionManage() {
   const log = useLoad(() => (showLog ? api<PublicBid[]>(`/sessions/${sid}/bids`, { query: { include_rejected: true, limit: 200 } }) : Promise.resolve([] as PublicBid[])), [sid, showLog]);
   const [dialog, setDialog] = useState<Action | null>(null);
   const [resultDialog, setResultDialog] = useState<'confirm' | 'adjust' | null>(null);
+  const [minutesErr, setMinutesErr] = useState<unknown>(null);
   const [adjBid, setAdjBid] = useState('');
   const [err, setErr] = useState<unknown>(null);
 
@@ -161,6 +162,14 @@ export default function SessionManage() {
                     {role === 'AUCTIONEER' && !draft && confirmed && (
                       <button className="btn o" style={{ width: '100%', marginTop: 12 }} onClick={() => setResultDialog('adjust')}>Điều chỉnh kết quả…</button>
                     )}
+                    <button
+                      className="btn"
+                      style={{ width: '100%', marginTop: 8 }}
+                      onClick={() => downloadFile(`/sessions/${sid}/results/${r.result_id}/minutes`, undefined, `bien-ban-${s?.code}-v${r.version_no}.pdf`).catch((e) => setMinutesErr(e))}
+                    >
+                      Tải biên bản {r.status === 'DRAFT' ? 'dự thảo' : 'kết quả'} (PDF)
+                    </button>
+                    <ErrorBox error={minutesErr} />
                     <div className="mut" style={{ marginTop: 8 }}>Xác nhận trên phần mềm không thay thế chữ ký pháp lý. Điều chỉnh sau xác nhận sẽ tạo phiên bản mới có lý do.</div>
                   </>
                 );
@@ -171,7 +180,8 @@ export default function SessionManage() {
                 <div className="h2">Các phiên bản kết quả</div>
                 {results.data.map((r) => (
                   <div key={r.result_id} style={{ fontSize: 13, padding: '4px 0' }}>
-                    v{r.version_no} · <Badge color={RESULT_STATUS[r.status].color}>{RESULT_STATUS[r.status].label}</Badge> · {r.winning_bidder_alias ?? '—'} {r.winning_amount ? vnd(r.winning_amount) : ''}
+                    v{r.version_no} · <Badge color={RESULT_STATUS[r.status].color}>{RESULT_STATUS[r.status].label}</Badge> · {r.winning_bidder_alias ?? '—'} {r.winning_amount ? vnd(r.winning_amount) : ''} ·{' '}
+                    <a href="#" onClick={(e) => { e.preventDefault(); downloadFile(`/sessions/${sid}/results/${r.result_id}/minutes`, undefined, `bien-ban-${s?.code}-v${r.version_no}.pdf`).catch(setMinutesErr); }}>biên bản</a>
                   </div>
                 ))}
               </div>

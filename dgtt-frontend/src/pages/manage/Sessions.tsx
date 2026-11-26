@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../api/client';
-import type { Page, Session, SessionStatus } from '../../api/types';
+import type { Asset, Page, Session, SessionStatus } from '../../api/types';
 import { useAuth } from '../../auth/AuthContext';
 import { Badge, ErrorBox, Loading, Pager, useLoad } from '../../components/ui';
 import { dt, fromLocalInput, money, SESSION_STATUS, toLocalInput, vnd } from '../../format';
@@ -60,13 +60,14 @@ export function SessionList() {
   );
 }
 
-// Tạo / sửa phiên (FR-16). Tài sản và đấu giá viên nhập theo mã số vì API tài sản (TASK-007) chưa có.
+// Tạo / sửa phiên (FR-16). Tài sản chọn từ danh sách tài sản Sắp đấu giá (API TASK-007); đấu giá viên nhập theo mã số.
 export function SessionForm() {
   const { id } = useParams();
   const editing = Boolean(id);
   const nav = useNavigate();
   const { data: existing, loading, error } = useLoad(() => (editing ? api<Session>(`/sessions/${id}`) : Promise.resolve(null)), [id]);
   const [f, setF] = useState<Record<string, string> | null>(null);
+  const assets = useLoad(() => (editing ? Promise.resolve(null) : api<Page<Asset>>('/assets', { query: { status: 'UPCOMING', size: 100 } })), [editing]);
   const [err, setErr] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
 
@@ -85,7 +86,7 @@ export function SessionForm() {
     notice_content: existing?.notice_content ?? '',
     reason: '',
   };
-  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF({ ...form, [k]: e.target.value });
+  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setF({ ...form, [k]: e.target.value });
   const published = existing && existing.status !== 'DRAFT';
   const issues: string[] = [];
   const t = (k: string) => (form[k] ? new Date(fromLocalInput(form[k])).getTime() : NaN);
@@ -126,10 +127,23 @@ export function SessionForm() {
     <form className="card form" style={{ maxWidth: 760 }} onSubmit={submit}>
       <div className="h1">{editing ? `Sửa phiên ${existing?.code}` : 'Tạo phiên đấu giá'}</div>
       <div className="row" style={{ flexDirection: 'row', gap: 12 }}>
-        <label style={{ flex: 1 }}>Mã số tài sản *<input className="in" type="number" min={1} required disabled={editing} value={form.asset_id} onChange={set('asset_id')} /></label>
+        <label style={{ flex: 2 }}>
+          Tài sản *
+          {editing ? (
+            <input className="in" disabled value={`${existing?.asset_code ?? ''} · ${existing?.asset_name ?? ''}`} />
+          ) : (
+            <select className="in" required value={form.asset_id} onChange={set('asset_id')}>
+              <option value="">— Chọn tài sản Sắp đấu giá —</option>
+              {assets.data?.items.map((a) => <option key={a.asset_id} value={a.asset_id}>{a.asset_code} · {a.name}</option>)}
+            </select>
+          )}
+        </label>
         <label style={{ flex: 1 }}>Mã số đấu giá viên *<input className="in" type="number" min={1} required value={form.auctioneer_id} onChange={set('auctioneer_id')} /></label>
       </div>
-      <div className="note">Chọn tài sản từ danh sách sẽ có khi backend xong API tài sản (TASK-007). Tạm thời nhập mã số (ID).</div>
+      {!editing && assets.data && assets.data.items.length === 0 && (
+        <div className="note">Chưa có tài sản ở trạng thái Sắp đấu giá. Thêm tài sản tại mục <Link to="/manage/assets">Tài sản</Link> trước.</div>
+      )}
+      <ErrorBox error={assets.error} />
       <div className="row" style={{ flexDirection: 'row', gap: 12 }}>
         <label style={{ flex: 1 }}>Giá khởi điểm (đ) *<input className="in" type="number" min={1} required value={form.starting_price} onChange={set('starting_price')} /></label>
         <label style={{ flex: 1 }}>Bước giá (đ) *<input className="in" type="number" min={1} required value={form.bid_increment} onChange={set('bid_increment')} /></label>
