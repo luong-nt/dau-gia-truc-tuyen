@@ -95,6 +95,7 @@ export function ManageLayout() {
           )}
           {role === 'STAFF' && <NavLink to="/manage/registrations">Xét duyệt hồ sơ</NavLink>}
           {role === 'STAFF' && <NavLink to="/manage/assets">Tài sản</NavLink>}
+          {(role === 'STAFF' || role === 'ADMIN') && <NavLink to="/manage/reports">Thống kê, báo cáo</NavLink>}
           {role === 'ADMIN' && (
             <>
               <div className="sec">Quản trị</div>
