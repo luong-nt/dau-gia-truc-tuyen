@@ -9,6 +9,7 @@ import MyRegistrations from './pages/bidder/MyRegistrations';
 import RegistrationForm from './pages/bidder/RegistrationForm';
 import Home from './pages/Home';
 import Assets from './pages/manage/Assets';
+import Reports from './pages/manage/Reports';
 import Reviews from './pages/manage/Reviews';
 import SessionManage from './pages/manage/SessionManage';
 import { SessionForm, SessionList } from './pages/manage/Sessions';
@@ -41,6 +42,7 @@ export default function App() {
             <Route path="manage/sessions/:id/edit" element={<RequireRole roles={['STAFF']}><SessionForm /></RequireRole>} />
             <Route path="manage/registrations" element={<RequireRole roles={['STAFF']}><Reviews /></RequireRole>} />
             <Route path="manage/assets" element={<RequireRole roles={['STAFF']}><Assets /></RequireRole>} />
+            <Route path="manage/reports" element={<RequireRole roles={['STAFF', 'ADMIN']}><Reports /></RequireRole>} />
             <Route path="admin/users" element={<RequireRole roles={['ADMIN']}><Users /></RequireRole>} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

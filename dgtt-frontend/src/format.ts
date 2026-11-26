@@ -1,6 +1,6 @@
-import type { Money, RegistrationStatus, Role, SessionStatus } from './api/types';
+import type { AssetStatus, Money, RegistrationStatus, Role, SessionStatus } from './api/types';
 
-/** Đọc tiền từ backend (chuỗi Decimal, có thể ở dạng số mũ "1E+8"). */
+/** Đọc tiền từ backend (chuỗi Decimal; bản cũ có thể ở dạng số mũ "1E+8", đã sửa ở TASK-013). */
 export function money(v: Money | null | undefined): number {
   if (v === null || v === undefined || v === '') return 0;
   return typeof v === 'number' ? v : Number(v);
@@ -83,6 +83,15 @@ export const RESULT_STATUS: Record<string, Badge> = {
   CONFIRMED: { label: 'Đã xác nhận', color: 'green' },
   SUPERSEDED: { label: 'Đã thay thế', color: 'gray' },
 };
+
+export const ASSET_STATUS: Record<AssetStatus, Badge> = {
+  UPCOMING: { label: 'Sắp đấu giá', color: 'blue' },
+  IN_AUCTION: { label: 'Đang đấu giá', color: 'green' },
+  ENDED: { label: 'Đã kết thúc', color: 'gray' },
+  SUSPENDED_CANCELLED: { label: 'Tạm dừng / Hủy', color: 'red' },
+};
+
+export const OWNER_TYPE: Record<string, string> = { INDIVIDUAL: 'Cá nhân', ORGANIZATION: 'Tổ chức' };
 
 export const ROLE_LABEL: Record<Role, string> = {
   ADMIN: 'Quản trị viên',
