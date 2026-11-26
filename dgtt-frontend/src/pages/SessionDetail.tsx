@@ -1,9 +1,94 @@
+import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { api } from '../api/client';
-import type { Page, Registration, Session } from '../api/types';
+import { api, ApiError, downloadFile } from '../api/client';
+import type { AssetDetail, OfficialResult, Page, Registration, Session } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
+import { AssetImage, firstImage } from '../components/AssetImage';
 import { Badge, ErrorBox, Loading, useLoad } from '../components/ui';
-import { dt, parseUtc, REG_STATUS, SESSION_STATUS, vnd } from '../format';
+import { dt, fileSize, parseUtc, REG_STATUS, SESSION_STATUS, vnd } from '../format';
+
+/** Ảnh và tài liệu của tài sản (FR-07). Tài sản chưa công khai thì khách không xem được: chỉ hiện ô trống. */
+function AssetGallery({ asset }: { asset: AssetDetail | null }) {
+  const [current, setCurrent] = useState<number | null>(null);
+  if (!asset) return <div className="img" style={{ height: 280 }}>Chưa có ảnh tài sản</div>;
+  const images = asset.attachments.filter((a) => a.file_type === 'ASSET_IMAGE');
+  const docs = asset.attachments.filter((a) => a.file_type === 'ASSET_DOCUMENT');
+  const main = images.find((a) => a.attachment_id === current) ?? firstImage(asset.attachments);
+  return (
+    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      <AssetImage assetId={asset.asset_id} att={main} height={280} alt={asset.name} />
+      {images.length > 1 && (
+        <div style={{ display: 'flex', gap: 6, padding: 8, overflowX: 'auto' }}>
+          {images.map((im) => (
+            <div
+              key={im.attachment_id}
+              onClick={() => setCurrent(im.attachment_id)}
+              style={{ width: 72, flex: '0 0 72px', cursor: 'pointer', outline: main?.attachment_id === im.attachment_id ? '2px solid #1d4ed8' : 'none', borderRadius: 4, overflow: 'hidden' }}
+            >
+              <AssetImage assetId={asset.asset_id} att={im} height={52} />
+            </div>
+          ))}
+        </div>
+      )}
+      {(asset.description || docs.length > 0) && (
+        <div style={{ padding: '10px 14px' }}>
+          {asset.description && <div style={{ whiteSpace: 'pre-wrap', fontSize: 13.5, lineHeight: 1.6, marginBottom: 8 }}>{asset.description}</div>}
+          {docs.map((d) => (
+            <div key={d.attachment_id} style={{ fontSize: 13 }}>
+              <a href="#" onClick={(e) => { e.preventDefault(); downloadFile(`/assets/${asset.asset_id}/attachments/${d.attachment_id}`, undefined, d.file_name); }}>
+                Tài liệu: {d.file_name}
+              </a>{' '}
+              <span className="mut">{fileSize(d.file_size)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Kết quả chính thức sau khi Đấu giá viên xác nhận (FR-23). Không công bố người trúng trước khi xác nhận. */
+function OfficialResultCard({ sid }: { sid: number }) {
+  const { data, error, loading } = useLoad(async () => {
+    try {
+      return await api<OfficialResult>(`/sessions/${sid}/results/official`);
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) return null;
+      throw e;
+    }
+  }, [sid]);
+  if (loading) return null;
+  if (error) return <div className="card"><div className="h2">Kết quả phiên</div><ErrorBox error={error} /></div>;
+  if (!data)
+    return (
+      <div className="card">
+        <div className="h2">Kết quả phiên</div>
+        <div className="mut">Phiên đã kết thúc. Kết quả đang chờ Đấu giá viên xác nhận.</div>
+      </div>
+    );
+  return (
+    <div className="card" style={{ border: data.is_mine ? '2px solid #15803d' : undefined }}>
+      <div className="h2">Kết quả chính thức</div>
+      {data.is_mine && <div className="ok-box" style={{ marginBottom: 10 }}>Bạn ({data.my_alias}) là người trúng đấu giá.</div>}
+      {data.is_failed ? (
+        <div>Đấu giá không thành: không có lượt trả giá hợp lệ.</div>
+      ) : (
+        <table className="kv"><tbody>
+          <tr><td>Người trúng đấu giá</td><td><b>{data.winning_bidder_alias}</b></td></tr>
+          <tr><td>Giá trúng</td><td><b style={{ color: '#15803d' }}>{vnd(data.winning_amount)}</b></td></tr>
+        </tbody></table>
+      )}
+      <div className="mut" style={{ marginTop: 6 }}>Xác nhận lúc {dt(data.confirmed_at)} · phiên bản {data.version_no}</div>
+      <button
+        className="btn"
+        style={{ marginTop: 10 }}
+        onClick={() => downloadFile(`/sessions/${sid}/results/${data.result_id}/minutes`, undefined, `bien-ban-${data.session_code}.pdf`)}
+      >
+        Tải biên bản kết quả (PDF)
+      </button>
+    </div>
+  );
+}
 
 // SCR-02 – Chi tiết tài sản và thông báo (FR-07, FR-08, FR-09)
 export default function SessionDetail() {
@@ -12,6 +97,10 @@ export default function SessionDetail() {
   const { user } = useAuth();
   const nav = useNavigate();
   const { data: s, error, loading } = useLoad(() => api<Session>(`/sessions/${sid}`), [sid, user?.user_id]);
+  const { data: asset } = useLoad(
+    async () => (s ? await api<AssetDetail>(`/assets/${s.asset_id}`).catch(() => null) : null),
+    [s?.asset_id, user?.user_id],
+  );
   const { data: mine } = useLoad(
     async () => {
       if (user?.role !== 'BIDDER') return null;
@@ -67,7 +156,7 @@ export default function SessionDetail() {
       </div>
       <div className="row">
         <div className="col" style={{ flex: 1.1 }}>
-          <div className="img" style={{ height: 280 }}>Ảnh tài sản (chờ API tài sản)</div>
+          <AssetGallery asset={asset} />
           <div className="card">
             <div className="h2">Thông báo đấu giá</div>
             <div style={{ whiteSpace: 'pre-wrap', fontSize: 13.5, lineHeight: 1.6 }}>
@@ -100,6 +189,7 @@ export default function SessionDetail() {
             </div>
             {action}
           </div>
+          {s.status === 'ENDED' && user && (user.role !== 'BIDDER' || mine?.status === 'APPROVED') && <OfficialResultCard sid={sid} />}
         </div>
       </div>
     </div>

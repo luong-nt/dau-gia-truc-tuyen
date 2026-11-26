@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
-import type { Page, Session, SessionStatus } from '../api/types';
+import type { AssetDetail, Page, Session, SessionStatus } from '../api/types';
+import { AssetImage, firstImage } from '../components/AssetImage';
 import { Badge, ErrorBox, Loading, Pager, useLoad } from '../components/ui';
 import { dt, SESSION_STATUS, vnd } from '../format';
 
@@ -18,6 +19,12 @@ function keyTime(s: Session) {
     default:
       return `Tổ chức: ${dt(s.start_time)}`;
   }
+}
+
+/** Ảnh đầu tiên của tài sản trên thẻ phiên (FR-07). */
+function CardImage({ assetId }: { assetId: number }) {
+  const { data } = useLoad(() => api<AssetDetail>(`/assets/${assetId}`).catch(() => null), [assetId]);
+  return <AssetImage assetId={assetId} att={firstImage(data?.attachments)} height={110} />;
 }
 
 export default function Home() {
@@ -77,7 +84,7 @@ export default function Home() {
         <div className="grid3">
           {data?.items.map((s) => (
             <Link key={s.session_id} to={`/sessions/${s.session_id}`} className="card" style={{ padding: 0, overflow: 'hidden', color: 'inherit', textDecoration: 'none' }}>
-              <div className="img" style={{ height: 110, borderRadius: 0 }}>Ảnh tài sản</div>
+              <CardImage assetId={s.asset_id} />
               <div style={{ padding: '12px 14px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
                   <span className="mut">{s.asset_code} · {s.code}</span>
