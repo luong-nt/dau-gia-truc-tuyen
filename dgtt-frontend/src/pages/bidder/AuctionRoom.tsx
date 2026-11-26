@@ -244,6 +244,7 @@ export default function AuctionRoom() {
                 {amount < minBid && amount > 0 && <div className="errt">Mức giá thấp hơn giá hợp lệ tối thiểu.</div>}
                 <div style={{ marginTop: 12 }} className="col">
                   {blocked && <div className="note">{blocked}</div>}
+                  {state.status === 'ENDED' && <Link className="btn" to={`/sessions/${state.session_id}`}>Xem kết quả chính thức và biên bản</Link>}
                   {pending && !pending.slow && <div className="note">⏳ Lệnh <b>{vnd(pending.amount)}</b> đang chờ máy chủ xác nhận… <span className="mut">(chưa phải giá đã nhận)</span></div>}
                   {pending?.slow && (
                     <div className="warn">
